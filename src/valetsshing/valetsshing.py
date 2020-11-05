@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 from typing import Optional, List
+from itertools import chain
 
 import click
 
@@ -15,7 +16,7 @@ class SshConfigDir:
 @dataclass
 class SshConfig:
     host: str
-    hostname: str
+    hostname: Optional[str] = None
     user: Optional[str] = None
     identityfile: Optional[Path] = None
     port: Optional[int] = None
@@ -26,8 +27,8 @@ def gen_parsed_ssh_config(config_path: Path) -> List[SshConfig]:
     text = config_path.read_text()
     split_pattern = re.compile(r'\n\s?\n+')
 
-    configs = [parse_ssh_config(conf) for conf in re.split(split_pattern, text) if conf]
-    print(configs)
+    configs_list: List[List[SshConfig]] = [parse_ssh_config(conf) for conf in re.split(split_pattern, text) if conf]
+    return [config for configs in configs_list for config in configs]
 
 def match_attr(attr: str, text: str) -> Optional[str]:
     if re.match(fr'^{attr}\s', text, flags=re.IGNORECASE):
@@ -37,7 +38,7 @@ def match_attr(attr: str, text: str) -> Optional[str]:
     return None
 
 
-def parse_ssh_config(text: str) -> SshConfig:
+def parse_ssh_config(text: str) -> List[SshConfig]:
     attr_dict: dict = {}
     optional_settings: List[str] = []
 
@@ -56,7 +57,22 @@ def parse_ssh_config(text: str) -> SshConfig:
         
     attr_dict['optional_settings'] = optional_settings
 
-    return SshConfig(**{key: value for key, value in attr_dict.items() if value})
+    try:
+        ssh_config = SshConfig(**{key: value for key, value in attr_dict.items() if value})
+        return [ssh_config]
+
+    except TypeError:
+
+        ssh_configs: List[SshConfig] = list()
+
+        # failed to parse
+        if optional_settings:
+            include_files = [line for line in optional_settings if re.match(fr'^include\s', line, flags=re.IGNORECASE)]
+
+            include_files
+        
+        return ssh_configs
+
 
 
 @click.group()
@@ -69,7 +85,10 @@ def add():
 
 @valetsshing.command()
 def lst():
-    gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/config'))
+    configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/config'))
+
+    print('-=-=-=-=-=-=-=-=-=-=')
+    print(configs)
 
 
 def run():
