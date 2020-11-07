@@ -87,6 +87,28 @@ def resolve_include_path(path: str, base_path: Path) -> List[Path]:
     except IndexError:
         return []
 
+
+def display_configs(configs: List[SshConfig]) -> None:
+
+    def calc_column_width(configs: List[SshConfig]) -> List[int]:
+        attr_width: List[int] = [
+            max([
+                len(getattr(config, attr)) for config in configs if hasattr(config, attr) and getattr(config, attr)
+            ]) for attr in ('host', 'hostname', 'user', 'identityfile', 'port')
+        ]
+
+        attr_width.append(
+            max([
+                max([
+                    len(optional_setting) for optional_setting in getattr(config, 'optional_settings')
+                ]) for config in configs if 1 < len(getattr(config, 'optional_settings'))
+            ])
+        )
+
+        return attr_width
+
+    print(calc_column_width(configs))
+
 @click.group()
 def valetsshing():
     pass
@@ -98,9 +120,7 @@ def add():
 @valetsshing.command()
 def lst():
     configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/config'))
-
-    print('-=-=-=-=-=-=-=-=-=-=')
-    print(configs)
+    display_configs(configs)
 
 
 def run():
