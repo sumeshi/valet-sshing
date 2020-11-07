@@ -20,7 +20,7 @@ class SshConfig:
     user: Optional[str] = None
     identityfile: Optional[Path] = None
     port: Optional[int] = None
-    optional_settings: dict = field(default_factory=dict)
+    optional_settings: List[str] = field(default_factory=list)
 
 
 def gen_parsed_ssh_config(config_path: Path) -> List[SshConfig]:
