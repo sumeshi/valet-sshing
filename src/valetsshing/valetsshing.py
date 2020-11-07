@@ -27,8 +27,8 @@ def gen_parsed_ssh_config(config_path: Path) -> List[SshConfig]:
     text = config_path.read_text()
     split_pattern = re.compile(r'\n\s?\n+')
 
-    configs_list: List[List[SshConfig]] = [parse_ssh_config(conf) for conf in re.split(split_pattern, text) if conf]
-    return [config for configs in configs_list for config in configs]
+    configs_list: List[List[SshConfig]] = [parse_ssh_config(conf, config_path) for conf in re.split(split_pattern, text) if conf]
+    return list(chain.from_iterable([config for config in configs_list]))
 
 def match_attr(attr: str, text: str) -> Optional[str]:
     if re.match(fr'^{attr}\s', text, flags=re.IGNORECASE):
@@ -38,12 +38,15 @@ def match_attr(attr: str, text: str) -> Optional[str]:
     return None
 
 
-def parse_ssh_config(text: str) -> List[SshConfig]:
+def parse_ssh_config(text: str, config_path: Path) -> List[SshConfig]:
     attr_dict: dict = {}
     optional_settings: List[str] = []
 
     for line in text.splitlines():
         line = line.strip()
+
+        if line.startswith('#'):
+            continue
 
         for attr in ('host', 'hostname', 'user', 'identityfile', 'port'):
             find_attr = match_attr(attr, line)
@@ -67,13 +70,22 @@ def parse_ssh_config(text: str) -> List[SshConfig]:
 
         # failed to parse
         if optional_settings:
-            include_files = [line for line in optional_settings if re.match(fr'^include\s', line, flags=re.IGNORECASE)]
+            include_paths = [line for line in optional_settings if re.match(fr'^include\s', line, flags=re.IGNORECASE)]
+            include_files = chain.from_iterable([resolve_include_path(include_file, config_path.parent) for include_file in include_paths])
 
-            include_files
+            for include_file in include_files:
+                ssh_configs.extend(gen_parsed_ssh_config(include_file))
         
         return ssh_configs
 
 
+def resolve_include_path(path: str, base_path: Path) -> List[Path]:
+    try:
+        cleaned_path = path.split(' ')[1]
+        return list(base_path.glob(cleaned_path))
+
+    except IndexError:
+        return []
 
 @click.group()
 def valetsshing():
