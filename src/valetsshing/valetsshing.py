@@ -111,22 +111,33 @@ def display_configs(configs: List[SshConfig]) -> None:
     
     def display_table(width_list: List[int]) -> None:
         
-        def gen_width_num(width_list: List[int], margin: int = 2):
+        def gen_width_num(width_list: List[int], margin: int = 1):
             while True:
                 for width in width_list:
                     yield width + margin
         
-        def build_row(width_list: List[int], start_char: str, sep_char: str, end_char: str, bg_char: str, rewrite_msgs: List[str]) -> str:
+        def build_row(start_char: str, sep_char: str, end_char: str, bg_char: str, rewrite_msgs: List[str]) -> str:
             g = gen_width_num(width_list)
-            return f"{start_char}{sep_char.join([bg_char * g.__next__() for _ in range(len(width_list))])}{end_char}"
+            return f"{start_char}{sep_char.join([f'{msg}{bg_char * (g.__next__() - len(msg))}' for msg in rewrite_msgs])}{end_char}"
 
-        def display_header_row(header_names: List[str], width_list: List[int]) -> None:
-            print(build_row(width_list, '┌', '┬', '┐', '─', [''] * 6))
-            print(build_row(width_list, '│', '│', '│', ' ', ['Host', 'HostName', 'User', 'IdentityFile', 'Port', 'Optional Settings']))
-            print(build_row(width_list, '├', '┼', '┤', '─', [''] * 6))
+        def display_header_row(header_names: List[str], width_list: List[int], configs: List[SshConfig]) -> None:
+            print(build_row('┌', '┬', '┐', '─', [''] * 6))
+            print(build_row('│', '│', '│', ' ', ['Host', 'HostName', 'User', 'IdentityFile', 'Port', 'Optional Settings']))
+            for config in configs:
+                print(build_row('├', '┼', '┤', '─', [''] * 6))
+                print(build_row('│', '│', '│', ' ', [
+                    config.host,
+                    config.hostname if config.hostname else '',
+                    config.user if config.user else '',
+                    config.identityfile if config.identityfile else '',
+                    config.port if config.port else '',
+                    ''
+                ]))
+            else:
+                print(build_row('└', '┴', '┘', '─', [''] * 6))
 
         header_names = ['Host', 'HostName', 'User', 'IdentityFile', 'Port', 'Optional Settings']
-        display_header_row(header_names, width_list)
+        display_header_row(header_names, width_list, configs)
 
     width_list = calc_column_width(configs)
     display_table(width_list)
