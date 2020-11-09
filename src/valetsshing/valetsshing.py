@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from typing import Optional, List
+from typing import Optional, List, Generator
 from itertools import chain
 
 import click
@@ -91,23 +91,45 @@ def resolve_include_path(path: str, base_path: Path) -> List[Path]:
 def display_configs(configs: List[SshConfig]) -> None:
 
     def calc_column_width(configs: List[SshConfig]) -> List[int]:
-        attr_width: List[int] = [
-            max([
-                len(getattr(config, attr)) for config in configs if hasattr(config, attr) and getattr(config, attr)
-            ]) for attr in ('host', 'hostname', 'user', 'identityfile', 'port')
-        ]
+        attr_width_list: List[int] = list()
+        for attr_name in ('host', 'hostname', 'user', 'identityfile', 'port', 'optional_settings'):
+            max_width: int = len(attr_name)
 
-        attr_width.append(
-            max([
-                max([
-                    len(optional_setting) for optional_setting in getattr(config, 'optional_settings')
-                ]) for config in configs if 1 < len(getattr(config, 'optional_settings'))
-            ])
-        )
+            for config in configs:
+                
+                if attr_name == 'optional_settings':
+                    if config.optional_settings:
+                        max_width = max([len(s) for s in config.optional_settings])
+                else:
+                    attr = getattr(config, attr_name)
+                    if attr and max_width < len(attr):
+                        max_width = len(attr)
+            
+            attr_width_list.append(max_width)
 
-        return attr_width
+        return attr_width_list
+    
+    def display_table(width_list: List[int]) -> None:
+        
+        def gen_width_num(width_list: List[int], margin: int = 2):
+            while True:
+                for width in width_list:
+                    yield width + margin
+        
+        def build_row(width_list: List[int], start_char: str, sep_char: str, end_char: str, bg_char: str, rewrite_msgs: List[str]) -> str:
+            g = gen_width_num(width_list)
+            return f"{start_char}{sep_char.join([bg_char * g.__next__() for _ in range(len(width_list))])}{end_char}"
 
-    print(calc_column_width(configs))
+        def display_header_row(header_names: List[str], width_list: List[int]) -> None:
+            print(build_row(width_list, '┌', '┬', '┐', '─', [''] * 6))
+            print(build_row(width_list, '│', '│', '│', ' ', ['Host', 'HostName', 'User', 'IdentityFile', 'Port', 'Optional Settings']))
+            print(build_row(width_list, '├', '┼', '┤', '─', [''] * 6))
+
+        header_names = ['Host', 'HostName', 'User', 'IdentityFile', 'Port', 'Optional Settings']
+        display_header_row(header_names, width_list)
+
+    width_list = calc_column_width(configs)
+    display_table(width_list)
 
 @click.group()
 def valetsshing():
@@ -120,6 +142,7 @@ def add():
 @valetsshing.command()
 def lst():
     configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/config'))
+    # configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/test.conf'))
     display_configs(configs)
 
 
