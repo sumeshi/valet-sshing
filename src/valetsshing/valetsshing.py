@@ -131,8 +131,11 @@ def display_configs(configs: List[SshConfig]) -> None:
                     config.user if config.user else '',
                     config.identityfile if config.identityfile else '',
                     config.port if config.port else '',
-                    ''
+                    config.optional_settings[0] if config.optional_settings else ''
                 ]))
+                if 1 < len(config.optional_settings):
+                    for optional_settings in config.optional_settings[1:]:
+                        print(build_row('│', '│', '│', ' ', ['', '', '', '', '', optional_settings]))
             else:
                 print(build_row('└', '┴', '┘', '─', [''] * 6))
 
