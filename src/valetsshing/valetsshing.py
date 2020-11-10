@@ -3,10 +3,13 @@ import re
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from typing import Optional, List, Generator
+from typing import Optional, List, Generator, Tuple
 from itertools import chain
 
 import click
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
 
 @dataclass
 class SshConfigDir:
@@ -150,6 +153,26 @@ def display_configs(configs: List[SshConfig]) -> None:
 def valetsshing():
     pass
 
+
+def generate_keypairs() -> Tuple[str, str]:
+    key = rsa.generate_private_key(
+        backend=default_backend(),
+        public_exponent=65537,
+        key_size=2048
+    )
+
+    private_key = key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption()
+    ).decode()
+    public_key = key.public_key().public_bytes(
+        serialization.Encoding.OpenSSH,
+        serialization.PublicFormat.OpenSSH
+    ).decode()
+
+    return private_key, public_key
+
 @valetsshing.command()
 @click.option("--host", prompt="Host", type=str)
 @click.option("--hostname", prompt="HostName", type=str)
@@ -180,6 +203,13 @@ def add(host: str, hostname: str, user: str, identityfile: str, port: int, optio
 
     click.echo(click.style('\nRegister with the following information?', fg='cyan', blink=True, bold=True))
     display_configs([config])
+
+    if generate_keys:
+        click.echo(click.style('\nGenerating Keys...', fg='cyan', blink=True))
+        private_key, public_key = generate_keypairs()
+        print(private_key)
+        print(public_key)
+        click.echo(click.style('Succeeded!', fg='green', blink=True))
 
 @valetsshing.command()
 def lst():
