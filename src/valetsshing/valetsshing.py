@@ -174,19 +174,28 @@ def generate_keypairs() -> Tuple[str, str]:
     return private_key, public_key
 
 @valetsshing.command()
-@click.option("--host", prompt="Host", type=str)
-@click.option("--hostname", prompt="HostName", type=str)
-@click.option("--user", prompt="User", type=str)
-@click.option("--identityfile", prompt="IdentityFile", type=str)
-@click.option("--port", prompt="Port", type=int)
+@click.option("--host", prompt="Host", type=str, required=True)
+@click.option("--hostname", prompt="HostName", type=str, required=True)
+@click.option("--user", type=str, default=None)
+@click.option("--identityfile", type=str, default=None)
+@click.option("--port", type=str, default=None)
 @click.option("--optional", type=str, multiple=True, default=list())
 @click.option("--quiet", "-q", is_flag=True)
 @click.option("--generate-keys", is_flag=True)
-def add(host: str, hostname: str, user: str, identityfile: str, port: int, optional: List[str], quiet: bool, generate_keys: bool):
-
+def add(host: str, hostname: str, user: Optional[str], identityfile: Optional[str], port: Optional[str], optional: List[str], quiet: bool, generate_keys: bool):
     optional_settings: List[str] = list()
 
     if not quiet:
+
+        user_input = input('User: ')
+        user = user_input if user_input else None
+
+        identityfile_input = input('IdentityFile: ')
+        identityfile = identityfile_input if identityfile_input else None
+
+        port_input = input('Port: ')
+        port = port_input if port_input else None
+
         if optional:
             optional_settings = list(optional)
         else:
@@ -199,7 +208,7 @@ def add(host: str, hostname: str, user: str, identityfile: str, port: int, optio
                 else:
                     break
 
-    config: SshConfig = SshConfig(host, hostname, user, identityfile, str(port), optional_settings)
+    config: SshConfig = SshConfig(host, hostname, user, identityfile, port, optional_settings)
 
     click.echo(click.style('\nRegister with the following information?', fg='cyan', blink=True, bold=True))
     display_configs([config])
