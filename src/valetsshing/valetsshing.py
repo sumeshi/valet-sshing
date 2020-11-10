@@ -18,8 +18,8 @@ class SshConfig:
     host: str
     hostname: Optional[str] = None
     user: Optional[str] = None
-    identityfile: Optional[Path] = None
-    port: Optional[int] = None
+    identityfile: Optional[str] = None
+    port: Optional[str] = None
     optional_settings: List[str] = field(default_factory=list)
 
 
@@ -99,7 +99,8 @@ def display_configs(configs: List[SshConfig]) -> None:
                 
                 if attr_name == 'optional_settings':
                     if config.optional_settings:
-                        max_width = max([len(s) for s in config.optional_settings])
+                        max_value = max([len(s) for s in config.optional_settings])
+                        max_width = max_value if max_width < max_value else max_width
                 else:
                     attr = getattr(config, attr_name)
                     if attr and max_width < len(attr):
@@ -150,8 +151,28 @@ def valetsshing():
     pass
 
 @valetsshing.command()
-def add():
-    print('add valetsshing')
+@click.option("--host", prompt="Host", type=str)
+@click.option("--hostname", prompt="HostName", type=str)
+@click.option("--user", prompt="User", type=str)
+@click.option("--identityfile", prompt="IdentityFile", type=str)
+@click.option("--port", prompt="Port", type=int)
+@click.option("--optional", type=str, multiple=True, default=list())
+def add(host: str, hostname: str, user: str, identityfile: str, port: int, optional: List[str]):
+    optional_settings: List[str] = list()
+    if optional:
+        optional_settings = list(optional)
+    else:
+        count = 1
+        while True:
+            user_input = input(f"Optional Settings #{count}: ")
+            if user_input:
+                optional_settings.append(user_input)
+                count += 1
+            else:
+                break
+
+    config: SshConfig = SshConfig(host, hostname, user, identityfile, str(port), optional_settings)
+    display_configs([config])
 
 @valetsshing.command()
 def lst():
