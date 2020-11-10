@@ -157,21 +157,28 @@ def valetsshing():
 @click.option("--identityfile", prompt="IdentityFile", type=str)
 @click.option("--port", prompt="Port", type=int)
 @click.option("--optional", type=str, multiple=True, default=list())
-def add(host: str, hostname: str, user: str, identityfile: str, port: int, optional: List[str]):
+@click.option("--quiet", "-q", is_flag=True)
+@click.option("--generate-keys", is_flag=True)
+def add(host: str, hostname: str, user: str, identityfile: str, port: int, optional: List[str], quiet: bool, generate_keys: bool):
+
     optional_settings: List[str] = list()
-    if optional:
-        optional_settings = list(optional)
-    else:
-        count = 1
-        while True:
-            user_input = input(f"Optional Settings #{count}: ")
-            if user_input:
-                optional_settings.append(user_input)
-                count += 1
-            else:
-                break
+
+    if not quiet:
+        if optional:
+            optional_settings = list(optional)
+        else:
+            count = 1
+            while True:
+                user_input = input(f"Optional Settings #{count}: ")
+                if user_input:
+                    optional_settings.append(user_input)
+                    count += 1
+                else:
+                    break
 
     config: SshConfig = SshConfig(host, hostname, user, identityfile, str(port), optional_settings)
+
+    click.echo(click.style('\nRegister with the following information?', fg='cyan', blink=True, bold=True))
     display_configs([config])
 
 @valetsshing.command()
