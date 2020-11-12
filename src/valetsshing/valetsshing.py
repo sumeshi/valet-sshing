@@ -26,7 +26,7 @@ class SshConfig:
     optional_settings: List[str] = field(default_factory=list)
 
 
-def gen_parsed_ssh_config(config_path: Path) -> List[SshConfig]:
+def convert_to_object_sshconfig(config_path: Path) -> List[SshConfig]:
     text = config_path.read_text()
     split_pattern = re.compile(r'\n\s?\n+')
 
@@ -77,7 +77,7 @@ def parse_ssh_config(text: str, config_path: Path) -> List[SshConfig]:
             include_files = chain.from_iterable([resolve_include_path(include_file, config_path.parent) for include_file in include_paths])
 
             for include_file in include_files:
-                ssh_configs.extend(gen_parsed_ssh_config(include_file))
+                ssh_configs.extend(convert_to_object_sshconfig(include_file))
         
         return ssh_configs
 
@@ -173,6 +173,10 @@ def generate_keypairs() -> Tuple[str, str]:
 
     return private_key, public_key
 
+def create_config_dir(dirname: str):
+    target_dir = Path(Path().home() / '.ssh' / '.valetsshing' / dirname).resolve()
+    print(target_dir)
+
 @valetsshing.command()
 @click.option("--host", prompt="Host", type=str, required=True)
 @click.option("--hostname", prompt="HostName", type=str, required=True)
@@ -213,6 +217,8 @@ def add(host: str, hostname: str, user: Optional[str], identityfile: Optional[st
     click.echo(click.style('\nRegister with the following information?', fg='cyan', blink=True, bold=True))
     display_configs([config])
 
+    create_config_dir(config.host)
+
     if generate_keys:
         click.echo(click.style('\nGenerating Keys...', fg='cyan', blink=True))
         private_key, public_key = generate_keypairs()
@@ -222,7 +228,7 @@ def add(host: str, hostname: str, user: Optional[str], identityfile: Optional[st
 
 @valetsshing.command()
 def lst():
-    configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/config'))
+    configs = convert_to_object_sshconfig(Path('/Users/s.nakano/.ssh/config'))
     # configs = gen_parsed_ssh_config(Path('/Users/s.nakano/.ssh/test.conf'))
     display_configs(configs)
 
